@@ -8,3 +8,6 @@ ebin/*.beam
 rel/example_project
 .concrete/DEV_MODE
 .rebar
+
+fasta/fasta
+fasta/knucleotide-input25000000.txt
