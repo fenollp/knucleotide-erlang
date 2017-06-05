@@ -24,29 +24,29 @@ seek_three() ->
 get_seq_three(Seq) ->
     case io:get_line('') of
 	eof -> iolist_to_binary(lists:reverse(Seq));
-	%% Str -> get_seq_three([to_upper(Str, []) | Seq])
 	Str -> get_seq_three([to_upper(Str) | Seq])
     end.
 
 %% Generate frequency hash table
-gen_freq_table(FreqT, Seq, Len) ->
-    gen_freq_table(Seq, Len, FreqT, byte_size(Seq) - Len).
+gen_freq_table(Seq, Len) ->
+    gen_freq_table(Seq, Len, byte_size(Seq) - Len).
 
-gen_freq_table(_, _, _, -1) -> done;
-gen_freq_table(Seq, Len, FreqT, Dec) ->
+gen_freq_table(_, _, -1) -> done;
+gen_freq_table(Seq, Len, Dec) ->
     <<_:Dec/binary, Key:Len/binary, _/binary>> = Seq,
-    update_counter(Key, FreqT),
-    gen_freq_table(Seq, Len, FreqT, Dec - 1).
+    update_counter(Key),
+    gen_freq_table(Seq, Len, Dec - 1).
 
 %% Update hash table counter for already existing pattern or insert new
-update_counter(Key, FreqT) ->
-    try ets:update_counter(FreqT, Key, 1) of _ -> ok
-    catch error:badarg -> ets:insert(FreqT, {Key, 1})
+update_counter(Key) ->
+    case get(Key) of
+        undefined -> put(Key, 1);
+        Value -> put(Key, Value + 1)
     end.
 
 %% Print the frequency table in the right order
-print_freq_table(FreqT, _Pattern) ->
-    FreqList = lists:reverse(lists:keysort(2, ets:tab2list(FreqT))),
+print_freq_table(_Pattern) ->
+    FreqList = lists:reverse(lists:keysort(2, get())),
     Total = lists:foldr(fun({_, Count}, Acc) -> Acc + Count end, 0, FreqList),
     [io:fwrite("~s ~.3f\n", [Nucleoid, Count * 100 / Total])
      || {Nucleoid, Count} <- FreqList
@@ -54,23 +54,21 @@ print_freq_table(FreqT, _Pattern) ->
     io:fwrite("\n").
 
 %% Print number of occurrences for a specific pattern
-print_count(FreqT, Pattern) ->
-    case ets:lookup(FreqT, Pattern) of
-	[{_, Value}] -> io:fwrite("~w\t~s\n", [Value, Pattern]);
-	[] -> io:fwrite("~w\t~s\n", [0, Pattern])
+print_count(Pattern) ->
+    case get(Pattern) of
+        undefined -> io:fwrite("~w\t~s\n", [0, Pattern]);
+        Value -> io:fwrite("~w\t~s\n", [Value, Pattern])
     end.
 
 %% Spawn a worker process with its own hash table
 do({PrintFun, Pattern}, Seq) ->
     spawn(fun() ->
-                  FreqT = ets:new(hash, [set]),
-                  gen_freq_table(FreqT, Seq, byte_size(Pattern)),
+                  gen_freq_table(Seq, byte_size(Pattern)),
                   %% Work is done, wait for token and print
                   receive Pids ->
-                          PrintFun(FreqT, Pattern),
+                          PrintFun(Pattern),
                           hd(Pids) ! tl(Pids)
-                  end,
-                  ets:delete(FreqT)
+                  end
           end
          ).
 
@@ -79,13 +77,13 @@ main(_Arg) ->
     seek_three(),
     Seq = get_seq_three([]),
     Pids = [do(Action, Seq)
-            || Action <- [{fun print_freq_table/2, <<"?">>}
-                         ,{fun print_freq_table/2, <<"??">>}
-                         ,{fun print_count/2, <<"GGT">>}
-                         ,{fun print_count/2, <<"GGTA">>}
-                         ,{fun print_count/2, <<"GGTATT">>}
-                         ,{fun print_count/2, <<"GGTATTTTAATT">>}
-                         ,{fun print_count/2, <<"GGTATTTTAATTTATAGT">>}
+            || Action <- [{fun print_freq_table/1, <<"?">>}
+                         ,{fun print_freq_table/1, <<"??">>}
+                         ,{fun print_count/1, <<"GGT">>}
+                         ,{fun print_count/1, <<"GGTA">>}
+                         ,{fun print_count/1, <<"GGTATT">>}
+                         ,{fun print_count/1, <<"GGTATTTTAATT">>}
+                         ,{fun print_count/1, <<"GGTATTTTAATTTATAGT">>}
                          ]
            ],
     %% Pass token to print in right order
