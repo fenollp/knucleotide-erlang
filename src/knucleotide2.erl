@@ -8,21 +8,9 @@
 -export([main/1]).
 
 to_upper(Str) ->
-    to_upper(Str, <<>>).
-to_upper(<<>>, Acc) -> Acc;
-to_upper(<<$\n, Cs/binary>>, Acc) -> to_upper(Cs, Acc);
-to_upper(<<C, Cs/binary>>, Acc) when $a =< C, C =< $z ->
-    to_upper(Cs, <<Acc/binary, (C - ($a - $A))>>).
-
-%% to_upper(Str) ->
-%%     <<case C of
-%%           _ when $a =< C, C =< $z ->
-%%               <<(C - ($a - $A))>>;
-%%           _ -> C
-%%       end
-%%       || <<C:1/binary>> <= Str,
-%%          C =/= $\n
-%%     >>.
+    <<<<(C - ($a - $A))>> || <<C>> <= Str,
+                             C =/= $\n
+    >>.
 
 %% Read and discard until start of third segment
 seek_three() ->
