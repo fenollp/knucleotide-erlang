@@ -7,11 +7,22 @@
 -module(knucleotide2).
 -export([main/1]).
 
-to_upper(<<C, Cs/binary>>, Acc) when C >= $a, C =< $z ->
-    to_upper(Cs, [C-($a-$A)| Acc]);
+to_upper(Str) ->
+    to_upper(Str, <<>>).
+to_upper(<<>>, Acc) -> Acc;
 to_upper(<<$\n, Cs/binary>>, Acc) -> to_upper(Cs, Acc);
-to_upper(<<C, Cs/binary>>, Acc) -> to_upper(Cs, [C | Acc]);
-to_upper(<<>>, Acc) -> list_to_binary(lists:reverse(Acc)).
+to_upper(<<C, Cs/binary>>, Acc) when $a =< C, C =< $z ->
+    to_upper(Cs, <<Acc/binary, (C - ($a - $A))>>).
+
+%% to_upper(Str) ->
+%%     <<case C of
+%%           _ when $a =< C, C =< $z ->
+%%               <<(C - ($a - $A))>>;
+%%           _ -> C
+%%       end
+%%       || <<C:1/binary>> <= Str,
+%%          C =/= $\n
+%%     >>.
 
 %% Read and discard until start of third segment
 seek_three() ->
@@ -25,7 +36,8 @@ seek_three() ->
 get_seq_three(Seq) ->
     case io:get_line('') of
 	eof -> iolist_to_binary(lists:reverse(Seq));
-	Str -> get_seq_three([to_upper(Str, []) | Seq])
+	%% Str -> get_seq_three([to_upper(Str, []) | Seq])
+	Str -> get_seq_three([to_upper(Str) | Seq])
     end.
 
 %% Generate frequency hash table
