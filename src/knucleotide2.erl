@@ -30,7 +30,7 @@ get_seq_three(Seq) ->
 
 %% Generate frequency hash table
 gen_freq_table(FreqT, Seq, Len) ->
-    gen_freq_table(Seq, Len, FreqT, size(Seq) - Len).
+    gen_freq_table(Seq, Len, FreqT, byte_size(Seq) - Len).
 
 gen_freq_table(_, _, _, -1) -> done;
 gen_freq_table(Seq, Len, FreqT, Dec) ->
@@ -47,10 +47,10 @@ update_counter(Key, FreqT) ->
 %% Print the frequency table in the right order
 print_freq_table(FreqT, _Pattern) ->
     FreqList = lists:reverse(lists:keysort(2, ets:tab2list(FreqT))),
-    Tot = lists:foldr(fun({_, Cnt}, Acc)-> Acc + Cnt end, 0, FreqList),
-    lists:foreach(fun({Nucleoid, Cnt})->
-			  io:fwrite("~s ~.3f\n", [Nucleoid, Cnt * 100 / Tot])
-		  end, FreqList),
+    Total = lists:foldr(fun({_, Count}, Acc) -> Acc + Count end, 0, FreqList),
+    [io:fwrite("~s ~.3f\n", [Nucleoid, Count * 100 / Total])
+     || {Nucleoid, Count} <- FreqList
+    ],
     io:fwrite("\n").
 
 %% Print number of occurrences for a specific pattern
