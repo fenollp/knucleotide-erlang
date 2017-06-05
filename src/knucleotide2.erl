@@ -23,8 +23,10 @@ seek_three() ->
 %% Read third segment
 get_seq_three(Seq) ->
     case io:get_line('') of
-	eof -> iolist_to_binary(lists:reverse(Seq));
-	Str -> get_seq_three([to_upper(Str) | Seq])
+	%% eof -> iolist_to_binary(lists:reverse(Seq));
+	%% Str -> get_seq_three([to_upper(Str) | Seq])
+	eof -> Seq;
+	Str -> get_seq_three(<<Seq/binary, (to_upper(Str))/binary>>)
     end.
 
 %% Generate frequency hash table
@@ -75,7 +77,7 @@ do({PrintFun, Pattern}, Seq) ->
 main(_Arg) ->
     io:setopts(standard_io, [binary]),
     seek_three(),
-    Seq = get_seq_three([]),
+    Seq = get_seq_three(<<>>),
     Pids = [do(Action, Seq)
             || Action <- [{fun print_freq_table/1, <<"?">>}
                          ,{fun print_freq_table/1, <<"??">>}
@@ -86,6 +88,6 @@ main(_Arg) ->
                          ,{fun print_count/1, <<"GGTATTTTAATTTATAGT">>}
                          ]
            ],
-    %% Pass token to print in right order
+    %% Pass token to print in order
     hd(Pids) ! tl(Pids) ++ [self()],
     receive _Pid -> halt(0) end.
