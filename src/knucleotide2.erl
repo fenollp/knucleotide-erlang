@@ -7,11 +7,6 @@
 -module(knucleotide2).
 -export([main/1]).
 
-to_upper(Str) ->
-    <<<<(C - ($a - $A))>> || <<C>> <= Str,
-                             C =/= $\n
-    >>.
-
 %% Read and discard until start of third segment
 seek_three() ->
     case io:get_line('') of
@@ -23,10 +18,12 @@ seek_three() ->
 %% Read third segment
 get_seq_three(Seq) ->
     case io:get_line('') of
-	%% eof -> iolist_to_binary(lists:reverse(Seq));
-	%% Str -> get_seq_three([to_upper(Str) | Seq])
-	eof -> Seq;
-	Str -> get_seq_three(<<Seq/binary, (to_upper(Str))/binary>>)
+	eof -> iolist_to_binary(lists:reverse(Seq));
+	Str ->
+            Upper = <<<<(C - ($a - $A))>> || <<C>> <= Str,
+                                             C =/= $\n
+                    >>,
+            get_seq_three([Upper|Seq])
     end.
 
 %% Generate frequency hash table
@@ -77,7 +74,7 @@ do({PrintFun, Pattern}, Seq) ->
 main(_Arg) ->
     io:setopts(standard_io, [binary]),
     seek_three(),
-    Seq = get_seq_three(<<>>),
+    Seq = get_seq_three([]),
     Pids = [do(Action, Seq)
             || Action <- [{fun print_freq_table/1, <<"?">>}
                          ,{fun print_freq_table/1, <<"??">>}
